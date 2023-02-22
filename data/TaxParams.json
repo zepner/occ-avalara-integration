@@ -1,0 +1,175 @@
+{
+    "shippingGroups": [
+        {
+            "priceInfo": {
+                "amount": 59.96,
+                "total": 84.96,
+                "shipping": 25,
+                "shippingSurchargeValue": 0,
+                "tax": 0,
+                "subTotal": 59.96,
+                "currencyCode": "USD",
+                "totalWithoutTax": 84.96
+            },
+            "shippingMethod": {
+                "shippingTax": 0,
+                "cost": 25,
+                "taxCode": "",
+                "value": "priorityShippingMethod",
+                "shippingMethodDescription": "Priority"
+            },
+            "shippingGroupId": "sg140414",
+            "shippingAddress": {
+                "lastName": "Smith",
+                "country": "US",
+                "address3": "",
+                "address2": "",
+                "city": "Syracuse",
+                "prefix": "",
+                "address1": "101 TNT Drive",
+                "postalCode": "13202",
+                "companyName": "",
+                "jobTitle": "",
+                "county": "",
+                "suffix": "",
+                "firstName": "Jean",
+                "phoneNumber": "555-555-1212",
+                "faxNumber": "",
+                "alias": "Home",
+                "middleName": "",
+                "state": "NY",
+                "email": null
+            },
+            "items": [
+                {
+                    "unitPrice": 14.99,
+                    "quantity": 4,
+                    "productId": "Product_1Ci",
+                    "commerceId": "ci1443367",
+                    "rawTotalPrice": 59.96,
+                    "returnedQuantity": 0,
+                    "salePrice": 0,
+                    "detailedItemPriceInfo": [
+                        {
+                            "discounted": false,
+                            "amount": 59.96,
+                            "quantity": 4,
+                            "tax": 0,
+                            "orderDiscountShare": 0,
+                            "detailedUnitPrice": 14.99,
+                            "currencyCode": "USD"
+                        }
+                    ],
+                    "shippingSurchargeValue": 0,
+                    "discountAmount": 0,
+                    "catRefId": "Sku_1Di",
+                    "discountInfo": [],
+                    "price": 59.96,
+                    "onSale": false,
+                    "stateDetailsAsUser": "The item has been initialized within the shipping group",
+                    "listPrice": 14.99,
+                    "status": "INITIAL"
+                }
+            ]
+        }
+    ],
+    "creationTime": 1486073446086,
+    "isTaxIncluded": true,
+    "orderId": "o130414",
+    "profile": {
+        "firstName": "Jean",
+        "lastName": "Smith",
+        "taxExempt": false,
+        "receiveEmail": "yes",
+        "id": "se-570031",
+        "locale": "en",
+        "email": "home@example.com",
+        "daytimeTelephoneNumber": ""
+    },
+    "orderStatus": "Incomplete",
+    "creationDate": "2017-02-02T22:10:46.086Z",
+    "orderProfileId": "se-570031",
+    "callType": "SalesOrder",
+    "priceInfo": {
+        "amount": 59.96,
+        "total": 59.96,
+        "shipping": 25,
+        "shippingSurchargeValue": 0,
+        "tax": 0,
+        "subTotal": 59.96,
+        "currencyCode": "USD",
+        "totalWithoutTax": 59.96
+    },
+    "shipFromAddress": {
+        "country": "US",
+        "lastName": null,
+        "address3": null,
+        "address2": null,
+        "city": "Cambridge",
+        "address1": "1 main st",
+        "prefix": null,
+        "postalCode": "02142",
+        "county": null,
+        "ownerId": null,
+        "suffix": null,
+        "firstName": null,
+        "middleName": null,
+        "state": "MA"
+    },
+    "shoppingCart": {
+        "numberOfItems": 4,
+        "items": [
+            {
+                "unitPrice": 14.99,
+                "quantity": 4,
+                "productId": "Product_1Ci",
+                "rawTotalPrice": 59.96,
+                "salePrice": 0,
+                "detailedItemPriceInfo": [
+                    {
+                        "discounted": false,
+                        "amount": 59.96,
+                        "quantity": 4,
+                        "tax": 0,
+                        "orderDiscountShare": 0,
+                        "detailedUnitPrice": 14.99,
+                        "currencyCode": "USD"
+                    }
+                ],
+                "displayName": "Liberty Heights",
+                "shippingSurchargeValue": 0,
+                "giftWithPurchaseCommerceItemMarkers": [],
+                "discountAmount": 0,
+                "isItemValid": true,
+                "taxCode": null,
+                "catRefId": "Sku_1Di",
+                "skuProperties": [
+                    {
+                        "propertyType": "sku-base",
+                        "name": "Name",
+                        "id": "displayName",
+                        "value": null
+                    },
+                    {
+                        "propertyType": "sku-base",
+                        "name": "Active",
+                        "id": "active",
+                        "value": true
+                    },
+                    {
+                        "propertyType": "sku-base",
+                        "name": "Id",
+                        "id": "id",
+                        "value": "Sku_1Di"
+                    }
+                ],
+                "discountInfo": [],
+                "price": 59.96,
+                "variant": [],
+                "onSale": false,
+                "id": "ci13000413",
+                "listPrice": 14.99
+            }
+        ]
+    }
+}
