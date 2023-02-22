@@ -14,7 +14,9 @@ router.post(constants.TAX_CALCULATION_ENDPOINT, async (req, res) => {
     return res.json(response);
   } catch (error) {
     res.statusMessage = error?.message;
-    res.status(400).end();
+    console.log(error);
+    //res.status(400).end();
+    return res.json(error);
   }
 });
 

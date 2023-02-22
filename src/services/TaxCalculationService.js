@@ -5,41 +5,31 @@ const { BadRequestError } = require("../utils/Error");
 const constants = require("../constants");
 
 const mock = require("../../data/TaxParams.json");
+const { Console } = require("console");
 
 async function calculateTaxFromAvalara(taxParams) {
 
+  //validate logic
   if(!!taxParams.request) {
     taxParams = taxParams.request;
   }
-  
-  if (global.occ) {
-    global.occ.logger.debug(
-        "TaxParams Request from Oracle Commerce: \n." + JSON.stringify(taxParams)
-    );
-  }
+  logmsg("OCC TaxParams Req"); logmsg(JSON.stringify(taxParams));
     
   try {
     validateTaxParams(taxParams);
   } catch (error) {
-    throw error;
+    return buildErrorTaxResponse(taxParams, error.message);
   }
 
   const headers = {
     auth: {
       username: "2001542042",
-      password: "1145AB49A2DB0CF9",
+      password: "33A0C8CF5196B6ED",
     },
     "Content-Type": constants.CONTENT_TYPE_APPLICATION_JSON,
   };
 
   var requestJson = buildRequestJson(taxParams);
-  //var responseJson;
-
-  if (global.occ) {
-    global.occ.logger.debug(
-      "Starting request: \n." + JSON.stringify(requestJson)
-    );
-  }
 
   const responseJson = await axios
     .post(
@@ -48,42 +38,48 @@ async function calculateTaxFromAvalara(taxParams) {
       headers
     )
     .then((result) => {
-      if (global.occ) {
-        global.occ.logger.debug(
-          "Response from Avalara: " + JSON.stringify(result.data)
-        );
-      }
+      logmsg("Ava API Resp"); logmsg(result.data);
       return result.data;
     })
-    .catch((error) => console.log(JSON.stringify(error.response.data)));
+    .catch((error) => {
+      logmsg(error.response.data);
+      return buildErrorTaxResponse(taxParams, error.response.data);
+    });
+  logmsg("ava-api responseJson"); logmsg(responseJson);
+
+  if(responseJson.response && responseJson.response.errors) {
+    return buildErrorTaxResponse(taxParams, JSON.stringify(responseJson.response.errors));
+  }
 
   var taxCalRes = buildTaxResponse(taxParams, responseJson);
-  if(global.occ) {
-    global.occ.logger.debug(
-        "Inside service: \n" + JSON.stringify(taxCalRes, null, 2)
-    );
-  }
-  return {"response": taxCalRes};
+  taxCalRes.response.shippingGroups[0].shippingMethod.tax = 0 ; // Hardcoding the shipping tax to 0.
+  logmsg('taxCalRes recalculated'); logmsg(taxCalRes);
+  return taxCalRes;
+}
+
+function buildErrorTaxResponse(taxParams, error) {
+  let taxResponse = {};
+  if('callType' in taxParams) taxResponse.callType = taxParams.callType;
+  if('creationDate' in taxParams) taxResponse.creationDate = taxParams.creationDate;
+  if('orderId' in taxParams) taxResponse.orderId = taxParams.orderId;
+  if('orderProfileId' in taxParams) taxResponse.orderProfileId = taxParams.orderProfileId;
+  if('orderStatus' in taxParams) taxResponse.orderStatus = taxParams.orderStatus;
+  
+  taxResponse.status = "failed";
+  taxResponse.errors = {
+    errorCode: "400",
+    message: error
+  };
+  taxResponse.timestamp = new Date().toISOString();
+  return {"response": taxResponse};
 }
 
 function buildTaxResponse(taxParams, responseJson) {
-  //var taxResponse = { ...taxParams };
-
-  /*delete taxResponse.giftWithPurchaseInfo;
-  delete taxResponse.priceInfo;
-  delete taxResponse.profile;
-  delete taxResponse.shipFromAddress;
-  delete taxResponse.shoppingCart;
-  delete taxResponse.creationSiteId;
-  delete taxResponse.dynamicProperties;
-  delete taxResponse.allowAlternateCurrency;
-  delete taxResponse.priceListGroup;
-  */
-
-  var taxResponse = {};
+  
+  let taxResponse = {};
   if('callType' in taxParams) taxResponse.callType = taxParams.callType;
   if('creationDate' in taxParams) taxResponse.creationDate = taxParams.creationDate;
-  if('creationTime' in taxParams) taxResponse.creationTime = taxParams.creationTime;
+  //if('creationTime' in taxParams) taxResponse.creationTime = taxParams.creationTime;
   //if(!!taxParams.errors) taxResponse.errors = taxParams.errors;
   if('isTaxIncluded' in taxParams) taxResponse.isTaxIncluded = taxParams.isTaxIncluded;
   if('orderId' in taxParams) taxResponse.orderId = taxParams.orderId;
@@ -94,9 +90,8 @@ function buildTaxResponse(taxParams, responseJson) {
   if('taxDate' in taxParams) taxResponse.taxDate = taxParams.taxDate;
   //if(!!taxParams.timestamp) taxResponse.timestamp = taxParams.timestamp;
 
-
-  var lineIndex = 0;
-  var lines = responseJson.lines;
+  let lineIndex = 0;
+  let lines = responseJson.lines;
 
   taxResponse.shippingGroups.forEach((sg) => {
     delete sg.discountInfo;
@@ -111,20 +106,18 @@ function buildTaxResponse(taxParams, responseJson) {
     sg.items.forEach((item) => {
       delete item.detailedItemPriceInfo;
 
-      //Not documented
+      // Not documented
       delete item.amount;
       delete item.pointOfNoRevision;
       delete item.relationshipType;
       delete item.shipFromAddress;
       delete item.asset;
-      ///
-      
 
       item.tax = lines[lineIndex].tax;
       item.taxDetails = [];
       lines[lineIndex].details.forEach((d) => {
         var taxDetail = {
-          jurisType: d.jurisType,
+          jurisType: d.jurisdictionType,
           rate: d.rate,
           tax: d.tax,
           taxName: d.taxName,
@@ -134,10 +127,7 @@ function buildTaxResponse(taxParams, responseJson) {
         if(d.jurisType === 'STA') stateTax += d.tax;
         else if(d.jurisType === 'CTY') countyTax = d.tax;
         else miscTax += d.tax || 0;
-
-        // TO-DO: Map other types of taxes;
-
-
+        // todo: Map other types of taxes
       });
       
       lineIndex++;
@@ -146,7 +136,7 @@ function buildTaxResponse(taxParams, responseJson) {
     sg.taxPriceInfo = {
         "cityTax": cityTax,
         //"secondaryCurrencyTaxAmount":0,
-        "amount": cityTax + countyTax + districtTax + stateTax + countryTax + valueAddedTax + miscTax,
+        "amount": parseFloat((cityTax + countyTax + districtTax + stateTax + countryTax + valueAddedTax + miscTax).toFixed(4)),
         "valueAddedTax": valueAddedTax,
         "countyTax": countyTax,
         "isTaxIncluded": taxParams.isTaxIncluded,
@@ -160,12 +150,10 @@ function buildTaxResponse(taxParams, responseJson) {
     sg.priceInfo.total += sg.priceInfo.tax;
   });
 
-  
-
   taxResponse.status = "success";
   taxResponse.timestamp = new Date().toISOString();
 
-  return taxResponse;
+  return {"response": taxResponse};
 }
 
 function validateTaxParams(taxParams) {
@@ -175,17 +163,9 @@ function validateTaxParams(taxParams) {
     throw new BadRequestError("Request parameters(json) is not correctly formatted.");
   }
 
-  const shipFromAddress = taxParams.shipFromAddress;
-  if (
-    !(
-      shipFromAddress &&
-      shipFromAddress.city &&
-      shipFromAddress.state &&
-      shipFromAddress.country &&
-      shipFromAddress.postalCode
-    )
-  ) {
-    throw new BadRequestError("Ship From Address is not complete");
+  if(!taxParams.dynamicProperties.filter(x => x.id == 'x_dealerTaxAddress1')[0] 
+    || !taxParams.dynamicProperties.filter(x => x.id == 'x_dealerTaxAddress1')[0].value) {
+    throw new BadRequestError("Dealer Address is not present");
   }
 
   const shippingGroups = taxParams.shippingGroups;
@@ -199,79 +179,78 @@ function validateTaxParams(taxParams) {
 }
 
 function buildRequestJson(taxParams) {
+  logmsg("buildRequestJson(taxParams)"); logmsg(taxParams);
   var taxCalReq = {};
 
-  taxCalReq.type = constants.REQUEST_TYPE_SALES_ORDER;
+  //taxCalReq.type = constants.REQUEST_TYPE_SALES_ORDER;
+  taxCalReq.type = constants.REQUEST_TYPE_SALES_INVOICE;
   taxCalReq.companyCode = "YAMAHAUS";
   taxCalReq.date = new Date().toISOString().substring(0, 10);
   taxCalReq.customerCode = "ABC"; // Needed from data.
 
-  const shipFromAddress = taxParams.shipFromAddress;
+  var dynamicProperties = taxParams.dynamicProperties;
+  logmsg('Dynamic Properties: ' + dynamicProperties);
+  
+  const dealerAddressPiped = dynamicProperties.filter(x => x.id == 'x_dealerTaxAddress1')[0].value;
 
-  // Assuming the location of the dealer is a single location. Means all goods are shipped from single location"
+  logmsg("Dealer Address Piped"); logmsg(dealerAddressPiped);
+  if (dealerAddressPiped.length == 0) {
+    return false;
+  }
+  var dealerAddress = dealerAddressPiped.split('|') ?? [];
+  
+  logmsg("Dealer Address"); logmsg(dealerAddress);
+
+  // Set shipFrom to dealer address
   taxCalReq.addresses = {
     singleLocation: {
-      line1: shipFromAddress.address1,
-      city: shipFromAddress.city,
-      region: shipFromAddress.state,
-      country: shipFromAddress.country,
-      postalCode: shipFromAddress.postalCode,
+      line1: dealerAddress[0],
+      city: dealerAddress[1],
+      region: dealerAddress[2],
+      postalCode: dealerAddress[3],
+      country: 'US',
     },
   };
 
   taxCalReq.lines = [];
-
   const items = taxParams.shippingGroups[0].items;
   taxParams.shippingGroups.forEach((sg) => {
-    var taxCode = sg.shippingMethod.taxCode;
+    // var taxCode = sg.shippingMethod.taxCode;
     sg.items.forEach((item) => {
       taxCalReq.lines.push({
         amount: item.price,
-        taxCode: taxCode, // Take from shippingGroups or dynamic properties??
+        taxCode: getTaxCode(taxParams, item.commerceItemId), // Take from shippingGroups or dynamic properties??
       });
     });
   });
 
-  taxCalReq.commit = false;
+  taxCalReq.commit = true;
   taxCalReq.currencyCode = constants.CURRENCY_CODE_USD;
 
-  /*taxCalReq = 
-    {
-        "lines": [
-            {
-            "number": "1",
-            "quantity": 1,
-            "amount": 100,
-            "taxCode": "PS081282",
-            "itemCode": "Y0001",
-            "description": "Yarn"
-            }
-        ],
-        "type": "SalesOrder",
-        //"companyCode": "DEFAULT",
-        "date": "2022-10-07",
-        "customerCode": "ABC",
-        //"purchaseOrderNo": "2022-10-07-001",
-        "addresses": {
-            "singleLocation": {
-                "line1": "2000 Main Street",
-                "city": "Irvine",
-                "region": "CA",
-                "country": "US",
-                "postalCode": "92614"
-            }
-        },
-        "commit": false,
-        "currencyCode": "USD",
-        //"description": "Yarn"
-    };*/
-
-  console.log(taxCalReq);
+  logmsg("taxCalReq"); logmsg(taxCalReq);
   return taxCalReq;
 }
 
-function getMockedTaxParams() {
-  return JSON.parse(fs.readFileSync("data/TaxParams.json", "utf8"));
+function getTaxCode(taxParams, commerceItemId) {
+  taxParams.shoppingCart.items.forEach(item => {
+    if(item.commerceItemId === commerceItemId) {
+      // strip the help-text from the taxCode
+      if (item.taxCode.indexOf(':')) {
+        return item.taxCode.split(':')[0];
+      } else {
+        return item.taxCode;
+      }
+    }
+  });
+  return false;
+}
+
+function logmsg(msgs) {
+  if (global.occ) {
+    global.occ.logger.debug(msgs);
+  } else {
+    console.log(msgs);
+  }
 }
 
 module.exports = {
